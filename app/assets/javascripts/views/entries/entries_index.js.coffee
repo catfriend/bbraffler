@@ -1,10 +1,37 @@
 class Raffler.Views.EntriesIndex extends Backbone.View
-
   template: JST['entries/index']
 
-  initialize: ->
-    @collection.on('reset', @render, this)
+  events:
+          'submit #new_entry': 'createEntry'
+          'click #draw': 'drawWinner'
 
-  render: ->
-    $(@el).html(@template(entries: @collection))
-    this
+  initialize: ->
+    @collection.on('reset', @render)
+    @collection.on('add', @appendEntry)
+
+  render: =>
+  $(@el).html(@template())
+  @collection.each(@appendEntry)
+  this
+
+  appendEntry: (entry) =>
+  view = new Raffler.Views.Entry(model: entry)
+  @$('#entries').append(view.render().el)
+
+  drawWinner: (event) ->
+  event.preventDefault()
+  @collection.drawWinner()
+
+  createEntry: (event) ->
+    event.preventDefault()
+    attributes = name: $('#new_entry_name').val(), add: true
+    @collection.create attributes,
+      wait: true
+      success: ->$('#new_entry')[0].reset()
+      error: @handleError
+
+  handleError: (entry, response) ->
+    if response.status == 422
+    errors = $.parseJSON(response.responseText).errors
+    for attribute, messages of errors
+      alert "#{attribute} #{message}" for message in messages
